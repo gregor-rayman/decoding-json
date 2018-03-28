@@ -90,12 +90,15 @@ static void pg_output_begin(LogicalDecodingContext* ctx, DecodingJsonData* data,
 
 static void pg_decode_commit_txn(LogicalDecodingContext* ctx, ReorderBufferTXN* txn, XLogRecPtr commit_lsn) {
   OutputPluginPrepareWrite(ctx, true);
+  char *lsn_str = DatumGetCString(DirectFunctionCall1(pg_lsn_out, txn->end_lsn));
   appendStringInfo(
     ctx->out,
-    "{\"type\":\"transaction.commit\",\"xid\":\"%u\",\"committed\":\"%s\"}",
+    "{\"type\":\"transaction.commit\",\"xid\":\"%u\",\"committed\":\"%s\",\"lsn\":\"%s\"}",
     txn->xid,
-    timestamptz_to_str(txn->commit_time)
+    timestamptz_to_str(txn->commit_time),
+    lsn_str
   );
+  pfree(lsn_str);
   OutputPluginWrite(ctx, true);
 }
 
@@ -110,7 +113,16 @@ static void print_literal(StringInfo s, Oid typid, char* outputstr) {
     case FLOAT4OID:
     case FLOAT8OID:
     case NUMERICOID:
-      appendStringInfoString(s, outputstr);
+      if (pg_strncasecmp(outputstr, "NaN", 3) == 0 ||
+        				pg_strncasecmp(outputstr, "Infinity", 8) == 0 ||
+    					pg_strncasecmp(outputstr, "-Infinity", 9) == 0)
+    					{
+    						appendStringInfoChar(s, '"');
+    						appendStringInfoString(s, outputstr);
+    						appendStringInfoChar(s, '"');
+    					}
+      else
+        appendStringInfoString(s, outputstr);
       break;
 
     case BITOID:
