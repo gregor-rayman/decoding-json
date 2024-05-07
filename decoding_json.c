@@ -260,17 +260,25 @@ static void pg_decode_change(LogicalDecodingContext* ctx, ReorderBufferTXN* txn,
 
   /* [ Cloudfarms specific table filters */
 
-  if (strncmp(schema_name, "farm_", 5) != 0 && strncmp(schema_name, "root_", 5) != 0 && strcmp(schema_name, "public")) {
-    /* ignore */
-    return;
-  }
+    if (strncmp(schema_name, "farm_", 5) != 0 && strncmp(schema_name, "root_", 5) != 0 && strcmp(schema_name, "public")) {
+      /* ignore */
+      return;
+    }
 
-  if (!strcmp(table_name, "journal_invalid") || string_ends_with(table_name, "_saved")) {
-    /* ignore */
-    return;
-  }
+    if (!strcmp(table_name, "journal_invalid") || 
+        !strcmp(table_name, "journal") ||
+        !strcmp(table_name, "logins") || 
+        !strcmp(table_name, "farmchore") ||
+        !strcmp(table_name, "appchore") ||
+        !strcmp(table_name, "mobiledevice") ||
+        !strcmp(table_name,"danavl_update_logger") ||
+        string_ends_with(table_name, "_bak") ||         
+        string_ends_with(table_name, "_saved")) {
+      /* ignore */
+      return;
+    }
 
-  /* ] Cloudfarms specific table filters */
+    /* ] Cloudfarms specific table filters */
 
 
   old = MemoryContextSwitchTo(data->context);
@@ -363,7 +371,7 @@ static void pg_decode_truncate(LogicalDecodingContext* ctx, ReorderBufferTXN* tx
 
     if (strncmp(schema_name, "farm_", 5) != 0 && strncmp(schema_name, "root_", 5) != 0 && strcmp(schema_name, "public")) {
       /* ignore */
-      return;
+      continue;
     }
 
     if (!strcmp(table_name, "journal_invalid") || 
@@ -376,7 +384,7 @@ static void pg_decode_truncate(LogicalDecodingContext* ctx, ReorderBufferTXN* tx
         string_ends_with(table_name, "_bak") ||         
         string_ends_with(table_name, "_saved")) {
       /* ignore */
-      return;
+      continue;
     }
 
     /* ] Cloudfarms specific table filters */
